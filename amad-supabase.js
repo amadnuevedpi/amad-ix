@@ -58,6 +58,10 @@ async function sbLoadEntries(marketId, weekKey) {
     if (!db[marketId][weekKey][cid][d]) db[marketId][weekKey][cid][d] = { inputs: ['','','','','',''] };
     db[marketId][weekKey][cid][d].inputs[i] = value !== null ? String(value) : '';
   });
+  // Refresh UI if this is the currently viewed market/week
+  if(window.curMkt===marketId&&window.curWeek===weekKey){
+    if(window.rebuildCurrentPane) window.rebuildCurrentPane();
+  }
 }
 
 /**
@@ -318,27 +322,45 @@ function sbSubscribeRealtime() {
  *   if (!ok) { showError(); return; }
  *   await sbBootApp(user);
  */
-async function sbBootApp(user) {
-  const marketId = user.market_id;
-  const isAdmin  = marketId === '__admin__';
-  const isVerifier = marketId === '__verifier__';
+async function sbBootApp(user){
+  const marketId=user.market_id;
+  const isAdmin=marketId==='__admin__';
+  const isVerifier=marketId==='__verifier__';
 
   // Load saved days
   await sbLoadSavedDays();
 
-  // Load flags (encoder gets own market only)
-  await sbLoadFlags(isAdmin || isVerifier ? null : marketId);
+  // Load flags
+  await sbLoadFlags(isAdmin||isVerifier?null:marketId);
 
   // Load edit requests
   await sbLoadEditRequests();
 
-  // Load entries for current market/week
-  if (!isAdmin && !isVerifier) {
-    await sbLoadEntries(marketId, window.curWeek);
+  // Load entries for ALL weeks visible to this user
+  if(!isAdmin&&!isVerifier){
+    // Load current week AND previous week so data appears on reload
+    await sbLoadEntries(marketId,window.curWeek);
+    // Also load a few surrounding weeks
+    const allWeeks=[...new Set(
+      Object.keys((window.db&&window.db[marketId])||{}).concat([window.curWeek])
+    )];
+    for(const wk of allWeeks){
+      if(wk!==window.curWeek) await sbLoadEntries(marketId,wk);
+    }
+  } else {
+    // Admin/verifier — load all markets for current week
+    const mkts=window.dataMkts?window.dataMkts():[];
+    for(const m of mkts){
+      await sbLoadEntries(m.id,window.curWeek);
+    }
   }
 
   // Subscribe to real-time updates
   sbSubscribeRealtime();
+
+  // Rebuild UI with loaded data
+  if(window.rebuildCurrentPane) window.rebuildCurrentPane();
+  if(window.updateCounters) window.updateCounters();
 }
 
 console.log('[AMAD IX] Supabase adapter loaded. URL:', SUPABASE_URL);
