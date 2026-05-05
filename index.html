@@ -2247,21 +2247,26 @@ const PASSWORDS={
 let curRole=null;
 let curUserMarket=null; // which market this encoder belongs to (null = all for admin/verifier)
 
-function doLogin(){
+async function doLogin(){
   const mktSel=document.getElementById('loginMarket').value;
   const pass=document.getElementById('loginPass').value;
   const err=document.getElementById('loginErr');
   err.style.display='none';
+
   if(!mktSel){err.textContent='❌ Please select your market.';err.style.display='block';return;}
+  if(!pass){err.textContent='❌ Please enter your password.';err.style.display='block';return;}
 
-  // Get profile for this login slot
-  const profile=userProfiles[mktSel];
-  const expectedPass=profile?profile.password:(mktSel==='__admin__'?PASSWORDS.admin:mktSel==='__verifier__'?PASSWORDS.verifier:PASSWORDS.encoder);
+  // Show loading state
+  err.textContent='⏳ Signing in...';err.style.display='block';err.style.color='#2ba899';
 
-  if(pass!==expectedPass){
-    err.textContent='❌ Incorrect password. Please try again.';err.style.display='block';return;
+  // ── Supabase login ──
+  const result=await sbLogin(mktSel,pass);
+  if(!result.ok){
+    err.textContent='❌ Incorrect password. Please try again.';
+    err.style.display='block';err.style.color='';return;
   }
 
+  const user=result.user;
   if(mktSel==='__admin__'){
     curRole='admin';curUserMarket=null;
   } else if(mktSel==='__verifier__'){
@@ -2270,9 +2275,14 @@ function doLogin(){
     curRole='encoder';curUserMarket=mktSel;
     curMkt=mktSel;
   }
+
   document.getElementById('loginOverlay').style.display='none';
   applyRoleUI();
   buildUI();
+
+  // ── Load all data from Supabase ──
+  await sbBootApp(user);
+
   setTimeout(()=>attachSelectionsToCurrentPane(),200);
   autoFlagAll();
   updateCounters();
