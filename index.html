@@ -2089,10 +2089,8 @@ function updateStatus(){
 // ═══════════════════════════════════════════════════════════════
 // SAVE / LOAD / EXPORT / PUSH
 // ═══════════════════════════════════════════════════════════════
-function saveAll(){
+async function saveAll(){
   try{
-    // Mark current market+week+day as saved/locked
-    // After this, any edit to a filled cell on THIS DAY requires approval (unless flagged)
     const daySaveK=curMkt+'__'+curWeek+'__'+curDay;
     if(db[curMkt]&&db[curMkt][curWeek]){
       const hasDataToday=Object.values(db[curMkt][curWeek]).some(cData=>{
@@ -2100,34 +2098,40 @@ function saveAll(){
       });
       if(hasDataToday) savedDays.add(daySaveK);
     }
-    localStorage.setItem('amad9v5_db',JSON.stringify(db));
-    localStorage.setItem('amad9v5_mkts',JSON.stringify(markets));
-    localStorage.setItem('amad9v5_coms',JSON.stringify(commodities));
+    // ── Save state to localStorage (small data only — no db) ──
     localStorage.setItem('amad9v5_state',JSON.stringify({curMkt,curYear,curWeek,curDay,curPeriod,analyticsScope}));
     localStorage.setItem('amad9v5_savedDays',JSON.stringify([...savedDays]));
+
+    // ── Save entries to Supabase ──
+    await sbSaveDay(curMkt,curWeek,curDay);
+    const coms=dataComs().filter(c=>c.id);
+    for(const com of coms){
+      const inputs=getInp(curMkt,curWeek,com.id,curDay);
+      for(let i=0;i<inputs.length;i++){
+        if(inputs[i]!==''&&inputs[i]!=null){
+          await sbSaveEntry(curMkt,curWeek,curDay,com.id,i,inputs[i]);
+        }
+      }
+    }
+
     const now=new Date().toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     const e=document.getElementById('sbSave');if(e)e.textContent=now;
     const saveBtn=document.querySelector('.btn-gn');
     if(saveBtn)saveBtn.textContent='💾 Saved ✓';
     const dd=dayDate(curDay);
     const dateLbl=dd?dd.toLocaleDateString('en-PH',{day:'2-digit',month:'2-digit',year:'numeric'}):'today';
-    showToast('✅ '+DAYS[curDay]+' ('+dateLbl+') saved & locked — edits now require approval');
+    showToast('✅ '+DAYS[curDay]+' ('+dateLbl+') saved & synced to cloud');
     rebuildCurrentPane();
   }catch(e){showToast('❌ '+e.message,'err');}
 }
-function loadSaved(){
+async function loadSaved(){
   try{
-    const d=localStorage.getItem('amad9v5_db');if(d)db=JSON.parse(d);
-    const m=localStorage.getItem('amad9v5_mkts');if(m)markets=JSON.parse(m);
-    const c=localStorage.getItem('amad9v5_coms');if(c)commodities=JSON.parse(c);
+    // Only load lightweight state from localStorage
     const s=localStorage.getItem('amad9v5_state');
     if(s){const st=JSON.parse(s);if(st.curMkt)curMkt=st.curMkt;if(st.curYear)curYear=st.curYear;if(st.curWeek)curWeek=st.curWeek;if(st.curDay!==undefined)curDay=st.curDay;if(st.curPeriod)curPeriod=st.curPeriod;if(st.analyticsScope)analyticsScope=st.analyticsScope;}
-    // Restore savedDays (daily lock keys)
     const sd=localStorage.getItem('amad9v5_savedDays');
     if(sd)savedDays=new Set(JSON.parse(sd));
-    // Legacy: also restore old savedWeeks keys
-    const sw=localStorage.getItem('amad9v5_savedWeeks');
-    if(sw){const old=JSON.parse(sw);/* old weekly keys not migrated to daily */;}
+    // Heavy data (entries, flags, etc.) loaded from Supabase after login via sbBootApp()
   }catch(e){console.warn(e);}
 }
 function clearMkt(){if(!confirm('Clear all entries for '+curMkt+' on week '+curWeek+'?'))return;if(db[curMkt])delete db[curMkt][curWeek];rebuildCurrentPane();updateStatus();showToast('🗑 Cleared');}
