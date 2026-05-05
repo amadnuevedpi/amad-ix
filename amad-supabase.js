@@ -6,8 +6,8 @@
 // Then replace YOUR_SUPABASE_URL and YOUR_SUPABASE_ANON_KEY below.
 // ══════════════════════════════════════════════════════════════════
 
-const SUPABASE_URL  = 'https://YOUR_PROJECT_REF.supabase.co';
-const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL  = 'https://xmmqcssomlgmrhvolvox.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhtbXFjc3NvbWxnbXJodm9sdm94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5MTgxMDcsImV4cCI6MjA5MzQ5NDEwN30.q4Cg7phJdAtchNwum-OMFXXUmabUt5ZwdGHULZr2Mns';
 
 // Initialise client (supabase-js loaded via CDN before this file)
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
