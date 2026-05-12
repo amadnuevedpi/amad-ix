@@ -2088,40 +2088,57 @@ function updateStatus(){
 // SAVE / LOAD / EXPORT / PUSH
 // ═══════════════════════════════════════════════════════════════
 async function saveAll(){
-  try{
-    const daySaveK=curMkt+'__'+curWeek+'__'+curDay;
-    if(db[curMkt]&&db[curMkt][curWeek]){
-      const hasDataToday=Object.values(db[curMkt][curWeek]).some(cData=>{
-        return cData[curDay]&&(cData[curDay].inputs||[]).some(v=>v!==''&&v!=null);
-      });
-      if(hasDataToday) savedDays.add(daySaveK);
-    }
-    // Save only lightweight state to localStorage (NOT the full db — too large)
-    try{localStorage.setItem('amad9v5_state',JSON.stringify({curMkt,curYear,curWeek,curDay,curPeriod,analyticsScope}));}catch(e){}
-    try{localStorage.setItem('amad9v5_savedDays',JSON.stringify([...savedDays]));}catch(e){}
+  const saveBtn = document.querySelector('.btn-gn');
+  if (saveBtn) { saveBtn.textContent = '⏳ Saving...'; saveBtn.disabled = true; }
 
-    // ── Push all entries for this day to Supabase ──
-    const saveBtn=document.querySelector('.btn-gn');
-    if(saveBtn)saveBtn.textContent='⏳ Saving...';
-    await sbSaveDay(curMkt,curWeek,curDay);
-    const coms=dataComs();
-    for(const com of coms){
-      const inputs=getInp(curMkt,curWeek,com.id,curDay);
-      for(let i=0;i<inputs.length;i++){
-        if(inputs[i]!==''&&inputs[i]!=null){
-          await sbSaveEntry(curMkt,curWeek,curDay,com.id,i,inputs[i]);
-        }
-      }
+  try {
+    // 1. Mark this day as saved (lock it for encoders)
+    const daySaveK = curMkt + '__' + curWeek + '__' + curDay;
+    const hasDataToday = db[curMkt] && db[curMkt][curWeek] &&
+      Object.values(db[curMkt][curWeek]).some(cData =>
+        cData[curDay] && (cData[curDay].inputs || []).some(v => v !== '' && v != null)
+      );
+
+    if (hasDataToday) {
+      savedDays.add(daySaveK);
+      // Persist saved days to Supabase
+      await sbSaveDay(curMkt, curWeek, curDay);
     }
-    const now=new Date().toLocaleTimeString('en-PH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-    const e=document.getElementById('sbSave');if(e)e.textContent=now;
-    if(saveBtn)saveBtn.textContent='💾 Saved ✓';
-    const dd=dayDate(curDay);
-    const dateLbl=dd?dd.toLocaleDateString('en-PH',{day:'2-digit',month:'2-digit',year:'numeric'}):'today';
-    showToast('✅ '+DAYS[curDay]+' ('+dateLbl+') saved & synced to cloud');
+
+    // 2. BATCH save all entries for this market+week+day (one round-trip)
+    const savedCount = await sbSaveDayBatch(curMkt, curWeek, curDay);
+
+    // 3. Update local state
+    try {
+      localStorage.setItem('amad9v5_state', JSON.stringify({
+        curMkt, curYear, curWeek, curDay, curPeriod, analyticsScope
+      }));
+      localStorage.setItem('amad9v5_savedDays', JSON.stringify([...savedDays]));
+    } catch(e) { /* localStorage full — ok */ }
+
+    // 4. Update UI
+    const now = new Date().toLocaleTimeString('en-PH', {
+      hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    const e = document.getElementById('sbSave');
+    if (e) e.textContent = now;
+
+    const dd = dayDate(curDay);
+    const dateLbl = dd
+      ? dd.toLocaleDateString('en-PH', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      : 'today';
+
+    showToast('✅ ' + DAYS[curDay] + ' (' + dateLbl + ') — ' + savedCount + ' observations saved to cloud');
     rebuildCurrentPane();
-  }catch(e){showToast('❌ '+e.message,'err');}
+
+  } catch (err) {
+    console.error('[AMAD IX] saveAll error:', err);
+    showToast('❌ Save failed: ' + err.message, 'err');
+  } finally {
+    if (saveBtn) { saveBtn.textContent = '💾 Save'; saveBtn.disabled = false; }
+  }
 }
+
 function loadSaved(){
   try{
     // Only load lightweight state (NOT db — data comes from Supabase after login)
