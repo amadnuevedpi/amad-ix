@@ -18,13 +18,13 @@
 // ★ REPLACE THIS with your Firebase project config
 // ─────────────────────────────────────────────────────────────────
 const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
+  apiKey:            "AIzaSyAEOWLp8_C3BmgOBc8eId3-bYsL-ezWyfM",
+  authDomain:        "amad-ix.firebaseapp.com",
+  databaseURL:       "https://amad-ix-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "amad-ix",
+  storageBucket:     "amad-ix.firebasestorage.app",
+  messagingSenderId: "167267361749",
+  appId:             "1:167267361749:web:02bb40e1cf8a1e0b6cd35c"
 };
 
 // ─────────────────────────────────────────────────────────────────
