@@ -2268,40 +2268,64 @@ let curRole=null;
 let curUserMarket=null; // which market this encoder belongs to (null = all for admin/verifier)
 
 async function doLogin(){
-  const mktSel=document.getElementById('loginMarket').value;
-  const pass=document.getElementById('loginPass').value;
-  const err=document.getElementById('loginErr');
-  err.style.display='none';
-  if(!mktSel){err.textContent='❌ Please select your market.';err.style.display='block';return;}
-  if(!pass){err.textContent='❌ Please enter your password.';err.style.display='block';return;}
+  const mktSel = document.getElementById('loginMarket').value;
+  const pass   = document.getElementById('loginPass').value;
+  const err    = document.getElementById('loginErr');
 
-  // Show signing in
-  err.textContent='⏳ Signing in...';err.style.display='block';err.style.color='#2ba899';
+  err.style.display = 'none';
 
-  // Authenticate via Supabase
-  const result=await sbLogin(mktSel,pass);
-  if(!result.ok){
-    err.textContent='❌ Incorrect password. Please try again.';
-    err.style.display='block';err.style.color='';return;
+  if (!mktSel) {
+    err.textContent   = '❌ Please select your market.';
+    err.style.display = 'block';
+    return;
+  }
+  if (!pass) {
+    err.textContent   = '❌ Please enter your password.';
+    err.style.display = 'block';
+    return;
   }
 
-  const user=result.user;
-  if(mktSel==='__admin__'){
-    curRole='admin';curUserMarket=null;
-  } else if(mktSel==='__verifier__'){
-    curRole='verifier';curUserMarket=null;
+  // Show signing in indicator
+  err.textContent   = '⏳ Signing in...';
+  err.style.display = 'block';
+  err.style.color   = '#2ba899';
+
+  // Authenticate via Firebase
+  const result = await sbLogin(mktSel, pass);
+
+  if (!result.ok) {
+    // ── Specific Firebase error messages ──────────────────
+    var msg = '❌ Incorrect password. Please try again.';
+    if (result.reason === 'too-many') msg = '❌ Too many failed attempts. Please wait a few minutes.';
+    if (result.reason === 'no-user')  msg = '❌ Account not found. Please contact your administrator.';
+    if (result.reason && result.reason.includes('network'))
+                                      msg = '❌ Network error. Check your internet connection.';
+
+    err.textContent   = msg;
+    err.style.display = 'block';
+    err.style.color   = '';
+    return;
+  }
+
+  // ── Login successful ──────────────────────────────────
+  const user = result.user;
+  if (mktSel === '__admin__') {
+    curRole = 'admin'; curUserMarket = null;
+  } else if (mktSel === '__verifier__') {
+    curRole = 'verifier'; curUserMarket = null;
   } else {
-    curRole='encoder';curUserMarket=mktSel;
-    curMkt=mktSel;
+    curRole = 'encoder'; curUserMarket = mktSel;
+    curMkt  = mktSel;
   }
 
-  // Hide login overlay, build shell UI
-  document.getElementById('loginOverlay').style.display='none';
-  err.style.color='';
+  // Hide login overlay
+  document.getElementById('loginOverlay').style.display = 'none';
+  err.style.color = '';
+
   applyRoleUI();
   buildUI();
 
-  // Load ALL data from Supabase — shows progress overlay, rebuilds UI when done
+  // Load all data from Firebase
   await sbBootApp(user);
 }
 
