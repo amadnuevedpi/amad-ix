@@ -1039,6 +1039,7 @@ const DEFAULT_COMS=[
 let markets=[...DEFAULT_MARKETS];
 let commodities=[...DEFAULT_COMS];
 let db={};
+var priceDB = db; 
 let curMkt=markets[0].id;
 let curYear=new Date().getFullYear();
 let curWeek='';
@@ -3199,12 +3200,6 @@ function boot(){
 boot();
 
 </script>
-<!-- Firebase SDKs (compat versions — no bundler needed) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-
-<!-- AMAD IX Firebase adapter (replaces amad-supabase.js) -->
-<script src="amad-firebase.js"></script>
+<script type="module" src="amad-firebase.js"></script>
 </body>
 </html>
