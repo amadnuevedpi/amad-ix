@@ -2275,39 +2275,31 @@ async function doLogin(){
   err.style.display = 'none';
 
   if (!mktSel) {
-    err.textContent   = '❌ Please select your market.';
-    err.style.display = 'block';
-    return;
+    err.textContent = '❌ Please select your market.';
+    err.style.display = 'block'; return;
   }
   if (!pass) {
-    err.textContent   = '❌ Please enter your password.';
-    err.style.display = 'block';
-    return;
+    err.textContent = '❌ Please enter your password.';
+    err.style.display = 'block'; return;
   }
 
-  // Show signing in indicator
-  err.textContent   = '⏳ Signing in...';
+  err.textContent = '⏳ Signing in...';
   err.style.display = 'block';
-  err.style.color   = '#2ba899';
+  err.style.color = '#2ba899';
 
-  // Authenticate via Firebase
   const result = await sbLogin(mktSel, pass);
 
   if (!result.ok) {
-    // ── Specific Firebase error messages ──────────────────
     var msg = '❌ Incorrect password. Please try again.';
-    if (result.reason === 'too-many') msg = '❌ Too many failed attempts. Please wait a few minutes.';
-    if (result.reason === 'no-user')  msg = '❌ Account not found. Please contact your administrator.';
-    if (result.reason && result.reason.includes('network'))
-                                      msg = '❌ Network error. Check your internet connection.';
-
-    err.textContent   = msg;
+    if (result.reason === 'too-many') msg = '❌ Too many attempts. Wait a few minutes.';
+    if (result.reason === 'no-user')  msg = '❌ Account not found. Contact your admin.';
+    if (result.reason === 'network')  msg = '❌ No internet connection. Check your network.';
+    err.textContent = msg;
     err.style.display = 'block';
-    err.style.color   = '';
+    err.style.color = '';
     return;
   }
 
-  // ── Login successful ──────────────────────────────────
   const user = result.user;
   if (mktSel === '__admin__') {
     curRole = 'admin'; curUserMarket = null;
@@ -2318,23 +2310,21 @@ async function doLogin(){
     curMkt  = mktSel;
   }
 
-  // Hide login overlay
   document.getElementById('loginOverlay').style.display = 'none';
   err.style.color = '';
-
   applyRoleUI();
   buildUI();
-
-  // Load all data from Firebase
   await sbBootApp(user);
 }
 
 function doLogout(){
-  if(!confirm('Sign out?'))return;
-  curRole=null;curUserMarket=null;
-  document.getElementById('loginOverlay').style.display='flex';
-  document.getElementById('loginPass').value='';
-  document.getElementById('loginErr').style.display='none';
+  if (!confirm('Sign out?')) return;
+  if (window.sbLogout) sbLogout(); // detach Firebase listeners
+  curRole = null;
+  curUserMarket = null;
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginErr').style.display = 'none';
 }
 
 function applyRoleUI(){
